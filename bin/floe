@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 require File.join(File.dirname(__FILE__), "../lib/floe")
 require "trollop"
+include Floe
 
 SUB_COMMANDS = %w[init]
 global_opts = Trollop::options do
@@ -12,10 +13,13 @@ end
 
 context = Context.new(global_opts)
 
-cmd = ARGV.shift # get the subcommand
+cmd = ARGV.shift or Trollop::die "no subcommand provided"
 cmd_opts = case cmd
-  when "copy"  # parse copy options
-    Trollop::options do
+  when "init"
+    context.init!
+  when "status"
+    context.status.each do |k, v|
+      puts "#{k}:\t#{v or 'unknown'}"
     end
   else
     Trollop::die "unknown subcommand #{cmd.inspect}"
