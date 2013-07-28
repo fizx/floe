@@ -17,7 +17,21 @@ Gem::Specification.new do |spec|
   spec.executables   = spec.files.grep(%r{^bin/}) { |f| File.basename(f) }
   spec.test_files    = spec.files.grep(%r{^(test|spec|features)/})
   spec.require_paths = ["lib"]
+  spec.post_install_message = <<-STR
+#{"="*80}
+You probably should add .floe to your global .gitignore. Try something like:
+  
+  # Create a global .gitignore
+  :$ git config --global core.excludesfile '~/.gitignore' 
 
+  # Append to the file
+  :$ echo .floe >> ~/.gitignore
+  
+#{"="*80}
+STR
+
+  spec.add_development_dependency "octokit"
   spec.add_development_dependency "bundler", "~> 1.3"
+  spec.add_development_dependency "rspec"
   spec.add_development_dependency "rake"
 end
