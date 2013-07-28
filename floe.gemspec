@@ -31,6 +31,7 @@ You probably should add .floe to your global .gitignore. Try something like:
 STR
 
   spec.add_dependency "octokit"
+  spec.add_dependency "grit"
   spec.add_dependency "trollop"
   spec.add_dependency "colorize"
   spec.add_development_dependency "bundler", "~> 1.3"

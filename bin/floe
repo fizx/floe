@@ -1,0 +1,22 @@
+#!/usr/bin/env ruby
+require File.join(File.dirname(__FILE__), "../lib/floe")
+require "trollop"
+
+SUB_COMMANDS = %w[init]
+global_opts = Trollop::options do
+  banner "floe, a command-line opinionated client for github issues"
+  opt :remote, "github remote name", :default => "origin"
+  opt :dir, "directory of the current repository", :default => "."
+  stop_on SUB_COMMANDS
+end
+
+context = Context.new(global_opts)
+
+cmd = ARGV.shift # get the subcommand
+cmd_opts = case cmd
+  when "copy"  # parse copy options
+    Trollop::options do
+    end
+  else
+    Trollop::die "unknown subcommand #{cmd.inspect}"
+  end
