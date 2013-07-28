@@ -8,8 +8,8 @@ Gem::Specification.new do |spec|
   spec.version       = Floe::VERSION
   spec.authors       = ["Kyle Maxwell"]
   spec.email         = ["kyle@kylemaxwell.com"]
-  spec.description   = %q{TODO: Write a gem description}
-  spec.summary       = %q{TODO: Write a gem summary}
+  spec.description   = %q{The command-line issues client}
+  spec.summary       = %q{A quirky github issues client}
   spec.homepage      = ""
   spec.license       = "MIT"
 
