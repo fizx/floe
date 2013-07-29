@@ -17,9 +17,147 @@ cmd = ARGV.shift or Trollop::die "no subcommand provided"
 cmd_opts = case cmd
   when "init"
     context.init!
+  when "milestones"  
+    context.octo.list_milestones(context.gh_name).each do |ms|
+      puts [ms.number, ms.title].join("\t")
+    end
+  when "issues"
+    context.octo.list_issues(context.gh_name).each do |issue|
+      puts [issue.number, issue.title].join("\t")
+    end
+  when "kids"
+    begin
+      comments= context.octo.issue_comments(context.gh_name, context.status["issue"])
+      cids = []
+      comments.each do |c|
+        if c.body =~ /depends on #(\d+)/
+          cids << $1.to_i
+        end
+      end
+      context.octo.list_issues(context.gh_name).select do |issue|
+        if cids.include?(issue.number)
+          puts [ issue.number, issue.title].join("\t")
+        end
+      end
+    rescue Octokit::NotFound
+      abort "Not on any issue"
+    end
+  when "add"
+    title = ARGV.shift
+    abort "expected title" unless title
+    begin
+      milestone = context.octo.milestone(context.gh_name, context.status["milestone"])
+      parent = begin
+          context.octo.issue(context.gh_name, context.status["issue"])
+        rescue Octokit::NotFound
+          nil
+        end
+      issue = context.octo.create_issue(context.gh_name, title, "", :milestone => milestone.number)
+      if parent
+        context.octo.add_comment(context.gh_name, parent.number, "depends on ##{issue.number}")
+        context.octo.add_comment(context.gh_name, issue.number, "blocking ##{parent.number}")
+      end
+    rescue Octokit::NotFound
+      abort "Not on any milestone"
+    end
+  when "push"
+    title = ARGV.shift
+    abort "expected title" unless title
+    begin
+      milestone = context.octo.milestone(context.gh_name, context.status["milestone"])
+      parent = begin
+          context.octo.issue(context.gh_name, context.status["issue"])
+        rescue Octokit::NotFound
+          nil
+        end
+      issue = context.octo.create_issue(context.gh_name, title, "", :milestone => milestone.number)
+      if parent
+        context.octo.add_comment(context.gh_name, parent.number, "depends on ##{issue.number}")
+        context.octo.add_comment(context.gh_name, issue.number, "blocking ##{parent.number}")
+      end
+      context.set "issue", issue.number
+    rescue Octokit::NotFound
+      abort "Not on any milestone"
+    end
+  when "pop"
+    issue = context.octo.issue(context.gh_name, context.status["issue"])
+    comments = context.octo.issue_comments(context.gh_name, context.status["issue"])
+    pid = nil
+    comments.each do |c|
+      if c.body =~ /blocking #(\d+)/
+        pid = $1.to_i
+      end
+    end
+    context.octo.close_issue context.gh_name, context.status["issue"]
+    context.set "issue", pid
+    begin
+      comments = context.octo.issue_comments(context.gh_name, pid)
+      cids = []
+      comments.each do |c|
+        if c.body =~ /depends on #(\d+)/
+          cids << $1.to_i
+        end
+      end
+      children = context.octo.list_issues(context.gh_name).select do |issue|
+        cids.include?(issue.number)
+      end
+      if children.size > 0
+        pid = children.first.number
+        puts [ children.first.number,  children.first.title].join("\t")
+        exit
+      end
+    rescue Octokit::NotFound
+    end
+    id = context.status["issue"]
+    begin
+      issue = context.octo.issue(context.gh_name, id)
+      puts [issue.number, issue.title].join("\t")
+    rescue Octokit::NotFound
+      puts "Not on any issue"
+    end
+  when "issue"    
+    case ARGV.shift 
+    when "set"
+      context.set "issue", ARGV.shift.to_i
+    when nil
+      id = context.status["issue"]
+      begin
+        issue = context.octo.issue(context.gh_name, id)
+        puts [issue.number, issue.title].join("\t")
+      rescue Octokit::NotFound
+        puts "Not on any issue"
+      end
+    end
+  when "milestone"
+    case ARGV.shift 
+    when nil
+      id = context.status["milestone"]
+      begin
+        ms = context.octo.milestones(context.gh_name, id)
+        puts [ms.number, ms.title].join("\t")
+      rescue Octokit::NotFound
+        puts "Not on any milestone"
+      end
+    when "add"
+      Trollop::die "expected milestone title"if ARGV.length < 1
+      context.octo.create_milestone context.gh_name, ARGV[0]
+    when "set"
+      context.set "milestone", ARGV.shift.to_i
+    end
   when "status"
-    context.status.each do |k, v|
-      puts "#{k}:\t#{v or 'unknown'}"
+    begin
+      id = context.status["milestone"]
+      ms = context.octo.milestone(context.gh_name, id)
+      puts ["Milestone:", ms.number, ms.title].join("\t")
+    rescue Octokit::NotFound
+      puts "Not on any milestone"
+    end
+    begin
+      id = context.status["issue"]
+      ms = context.octo.issue(context.gh_name, id)
+      puts ["Issue:    ", ms.number, ms.title].join("\t")
+    rescue Octokit::NotFound
+      puts "Not on any issue"
     end
   else
     Trollop::die "unknown subcommand #{cmd.inspect}"

@@ -1,5 +1,7 @@
 require "grit"
 require "yaml"
+require "octokit"
+
 module Floe
   class Context
     attr_reader :repo
@@ -11,6 +13,37 @@ module Floe
       @status["milestone"] ||= nil
       @status["issue"] ||= nil
       load_status if initialized?
+    end
+    
+    def credentialspath
+      File.join(ENV["HOME"], ".floecredentials")
+    end
+    
+    def credentials
+      hash = YAML.load(File.read(credentialspath))
+      hash.inject({}) {|m, (k, v)| m[k.to_sym] = v; m }
+    rescue
+      raise <<-STR
+You should create #{credentialspath}.  It should look like:
+
+  login: <USER>
+  password: <PASSWORD>
+
+STR
+    end
+    
+    def octo
+      @client ||= begin
+        Octokit::Client.new(credentials)
+      end
+    end
+    
+    def gh_name
+      "#{user}/#{repo_name}"
+    end
+    
+    def octo_repo
+      octo.repository @ctxt.gh_name
     end
     
     def url
